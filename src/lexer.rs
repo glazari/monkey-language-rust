@@ -3,6 +3,7 @@ use crate::token::KEYWORDS;
 
 use Token::*;
 
+#[derive(Debug)]
 pub struct Lexer {
     input: String,
     position: usize,
@@ -42,6 +43,12 @@ impl Lexer {
             ')' => tok = RPAREN,
             ',' => tok = COMMA,
             '+' => tok = PLUS,
+            '-' => tok = MINUS,
+            '!' => tok = BANG,
+            '*' => tok = ASTERISK,
+            '/' => tok = SLASH,
+            '<' => tok = LT,
+            '>' => tok = GT,
             '{' => tok = LBRACE,
             '}' => tok = RBRACE,
             '\0' => tok = EOF,
@@ -50,12 +57,12 @@ impl Lexer {
                 if KEYWORDS.contains_key(ident.as_str()) {
                     return KEYWORDS[ident.as_str()].clone();
                 }
-                return IDENT(ident)
-            },
+                return IDENT(ident);
+            }
             '0'..='9' => {
                 let int = self.read_number();
                 return INT(int);
-            },
+            }
             _ => tok = ILLEGAL,
         }
         self.read_char();
@@ -67,7 +74,9 @@ impl Lexer {
         while self.ch.is_numeric() {
             self.read_char();
         }
-        self.input[position..self.position].parse().expect("not a number!")
+        self.input[position..self.position]
+            .parse()
+            .expect("not a number!")
     }
 
     fn skip_whitespace(&mut self) {
@@ -82,6 +91,39 @@ impl Lexer {
             self.read_char();
         }
         self.input[position..self.position].to_string()
+    }
+
+    fn print_current_position(&self) {
+        let mut line = 0;
+        let mut line_start = 0;
+        let mut line_end = 0;
+        let mut has_position = false;
+        let mut column = 0;
+        let mut last_column =0;
+        for (i, c) in self.input.chars().enumerate() {
+            if i == self.position {
+                has_position = true;
+                last_column = column;
+            }
+            if c == '\n' {
+                if has_position {
+                    line_end = i;
+                    break;
+                }
+                line_start = i + 1;
+                line += 1;
+                column = 0;
+            } else {
+                column += 1;
+            }
+        }
+        println!("lexer: {:#?}", self);
+        println!("input: ({}:{})", line, column);
+        unsafe {
+            println!("{}", self.input.slice_unchecked(line_start, line_end));
+        }
+        println!("{}^", " ".repeat(last_column));
+        println!("{}|", " ".repeat(last_column));
     }
 }
 
@@ -112,6 +154,8 @@ mod test {
             x + y;
         };
         let result = add(five, ten);
+        !-/*5;
+        5 < 10 > 5;
         "#;
         let mut lexer = Lexer::new(input);
         let expected = vec![
@@ -151,11 +195,23 @@ mod test {
             IDENT("ten".to_string()),
             RPAREN,
             SEMICOLON,
+            BANG,
+            MINUS,
+            SLASH,
+            ASTERISK,
+            INT(5),
+            SEMICOLON,
+            INT(5),
+            LT,
+            INT(10),
+            GT,
+            INT(5),
+            SEMICOLON,
             EOF,
         ];
         for expected_token in expected {
             let token = lexer.next_token();
-            assert_eq!(token, expected_token);
+            assert_eq!(token, expected_token, "lexer state: {:#?}", lexer.print_current_position());
         }
     }
 }
