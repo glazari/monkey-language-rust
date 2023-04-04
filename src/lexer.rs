@@ -12,7 +12,7 @@ pub struct Lexer {
 }
 
 impl Lexer {
-    fn new(input: &str) -> Lexer {
+    pub fn new(input: &str) -> Lexer {
         let mut l = Lexer {
             input: input.to_string(),
             position: 0,
@@ -41,7 +41,7 @@ impl Lexer {
         }
     }
 
-    fn next_token(&mut self) -> Token {
+    pub fn next_token(&mut self) -> Token {
         let tok: Token;
         self.skip_whitespace();
         match self.ch {
@@ -62,7 +62,7 @@ impl Lexer {
             '!' => {
                 if self.peek_char() == '=' {
                     self.read_char();
-                    tok = NOT_EQ;
+                    tok = NotEQ;
                 } else {
                     tok = BANG;
                 }
@@ -142,7 +142,7 @@ impl Lexer {
         println!("lexer: {:#?}", self);
         println!("input: ({}:{})", line, column);
         unsafe {
-            println!("{}", self.input.slice_unchecked(line_start, line_end));
+            println!("{}", self.input.get_unchecked(line_start..line_end));
         }
         println!("{}^", " ".repeat(last_column));
         println!("{}|", " ".repeat(last_column));
@@ -261,7 +261,7 @@ mod test {
             INT(10),
             SEMICOLON,
             INT(10),
-            NOT_EQ,
+            NotEQ,
             INT(9),
             SEMICOLON,
             EOF,
