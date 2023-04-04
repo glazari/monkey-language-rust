@@ -32,10 +32,20 @@ pub enum Token {
     // keywords
     FUNCTION,
     LET,
+    TRUE,
+    FALSE,
+    IF,
+    ELSE,
+    RETURN,
 }
 use Token::*;
 
 pub static KEYWORDS: Map<&'static str, Token> = phf_map! {
     "fn" => FUNCTION,
     "let" => LET,
+    "true" => TRUE,
+    "false" => FALSE,
+    "if" => IF,
+    "else" => ELSE,
+    "return" => RETURN,
 };

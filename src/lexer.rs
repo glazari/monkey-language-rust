@@ -99,7 +99,7 @@ impl Lexer {
         let mut line_end = 0;
         let mut has_position = false;
         let mut column = 0;
-        let mut last_column =0;
+        let mut last_column = 0;
         for (i, c) in self.input.chars().enumerate() {
             if i == self.position {
                 has_position = true;
@@ -156,6 +156,12 @@ mod test {
         let result = add(five, ten);
         !-/*5;
         5 < 10 > 5;
+
+        if (5 < 10) {
+            return true;
+        } else {
+            return false;
+        }
         "#;
         let mut lexer = Lexer::new(input);
         let expected = vec![
@@ -207,11 +213,34 @@ mod test {
             GT,
             INT(5),
             SEMICOLON,
+            IF,
+            LPAREN,
+            INT(5),
+            LT,
+            INT(10),
+            RPAREN,
+            LBRACE,
+            RETURN,
+            TRUE,
+            SEMICOLON,
+            RBRACE,
+            ELSE,
+            LBRACE,
+            RETURN,
+            FALSE,
+            SEMICOLON,
+            RBRACE,
+
             EOF,
         ];
         for expected_token in expected {
             let token = lexer.next_token();
-            assert_eq!(token, expected_token, "lexer state: {:#?}", lexer.print_current_position());
+            assert_eq!(
+                token,
+                expected_token,
+                "lexer state: {:#?}",
+                lexer.print_current_position()
+            );
         }
     }
 }
