@@ -11,6 +11,8 @@ pub enum Token {
 
     // Operators
     ASSIGN,
+    EQ,
+    NOT_EQ,
     PLUS,
     MINUS,
     BANG,

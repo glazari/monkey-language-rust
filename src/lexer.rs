@@ -33,18 +33,40 @@ impl Lexer {
         self.read_position += 1;
     }
 
+    fn peek_char(&self) -> char {
+        if self.read_position >= self.input.len() {
+            '\0'
+        } else {
+            self.input.chars().nth(self.read_position).unwrap()
+        }
+    }
+
     fn next_token(&mut self) -> Token {
         let tok: Token;
         self.skip_whitespace();
         match self.ch {
-            '=' => tok = ASSIGN,
+            '=' => {
+                if self.peek_char() == '=' {
+                    self.read_char();
+                    tok = EQ;
+                } else {
+                    tok = ASSIGN;
+                }
+            }
             ';' => tok = SEMICOLON,
             '(' => tok = LPAREN,
             ')' => tok = RPAREN,
             ',' => tok = COMMA,
             '+' => tok = PLUS,
             '-' => tok = MINUS,
-            '!' => tok = BANG,
+            '!' => {
+                if self.peek_char() == '=' {
+                    self.read_char();
+                    tok = NOT_EQ;
+                } else {
+                    tok = BANG;
+                }
+            }
             '*' => tok = ASTERISK,
             '/' => tok = SLASH,
             '<' => tok = LT,
@@ -162,6 +184,10 @@ mod test {
         } else {
             return false;
         }
+
+
+        10 == 10;
+        10 != 9;
         "#;
         let mut lexer = Lexer::new(input);
         let expected = vec![
@@ -230,7 +256,14 @@ mod test {
             FALSE,
             SEMICOLON,
             RBRACE,
-
+            INT(10),
+            EQ,
+            INT(10),
+            SEMICOLON,
+            INT(10),
+            NOT_EQ,
+            INT(9),
+            SEMICOLON,
             EOF,
         ];
         for expected_token in expected {
