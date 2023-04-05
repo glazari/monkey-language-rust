@@ -1,6 +1,8 @@
 mod token;
 mod lexer;
 mod repl;
+mod ast;
+mod parser;
 
 fn main() {
     let user = std::env::var("USER").unwrap();
