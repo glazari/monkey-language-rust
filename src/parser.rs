@@ -1,4 +1,4 @@
-use crate::ast::{Expression, Identifier, LetStatement, Program, Statement};
+use crate::ast::{Expression, Identifier, LetStatement, Program, Statement, ReturnStatement};
 use crate::lexer::Lexer;
 use crate::token::Token;
 
@@ -54,6 +54,7 @@ impl Parser {
     fn parse_statement(&mut self) -> Result<Statement, String> {
         match self.cur_token {
             Token::LET => self.parse_let_statement(),
+            Token::RETURN => self.parse_return_statement(),
             _ => Err(format!("no parse function for {:?}", self.cur_token)),
         }
     }
@@ -62,6 +63,24 @@ impl Parser {
         while self.cur_token != Token::SEMICOLON {
             self.next_token();
         }
+    }
+
+    fn  parse_return_statement(&mut self) -> Result<Statement, String> {
+        let token = self.cur_token.clone();
+        self.next_token();
+
+        let expression = Expression::Identifier(Identifier {
+            token: self.cur_token.clone(),
+            value: self.cur_token.literal(),
+        });
+
+        // skipping the expression until we encounter a semicolon
+        self.skip_statement();
+
+        Ok(Statement::ReturnStatement(ReturnStatement {
+            token,
+            return_value: expression,
+        }))
     }
 
     fn parse_let_statement(&mut self) -> Result<Statement, String> {
@@ -187,5 +206,50 @@ let 838383;
         assert_eq!(
             program.err().unwrap(),
             "expected next token to be ASSIGN, got INT(5)\nexpected next token to be IDENT, got ASSIGN\nexpected next token to be IDENT, got INT(838383)")
+    }
+
+    #[test]
+    fn test_return_statements() {
+        let input = r#"
+return 5;
+return 10;
+return 993322;
+"#;
+
+        let lexer = Lexer::new(input);
+        let mut parser = Parser::new(lexer);
+
+        let expected_program = Program {
+            statements: vec![
+                Statement::ReturnStatement(ReturnStatement {
+                    token: Token::RETURN,
+                    return_value: Expression::Identifier(Identifier {
+                        token: Token::INT(5),
+                        value: "5".to_string(),
+                    }),
+                }),
+                Statement::ReturnStatement(ReturnStatement {
+                    token: Token::RETURN,
+                    return_value: Expression::Identifier(Identifier {
+                        token: Token::INT(10),
+                        value: "10".to_string(),
+                    }),
+                }),
+                Statement::ReturnStatement(ReturnStatement {
+                    token: Token::RETURN,
+                    return_value: Expression::Identifier(Identifier {
+                        token: Token::INT(993322),
+                        value: "993322".to_string(),
+                    }),
+                }),
+            ],
+        };
+
+        let program = match parser.parse_program() {
+            Ok(program) => program,
+            Err(e) => panic!("parse_program() returned an error: {}", e),
+        };
+
+        assert_eq!(program, expected_program);
     }
 }

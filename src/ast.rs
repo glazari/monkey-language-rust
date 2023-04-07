@@ -22,6 +22,7 @@ impl Program {
 #[derive(Debug, PartialEq)]
 pub enum Statement {
     LetStatement(LetStatement),
+    ReturnStatement(ReturnStatement),
 }
 
 
@@ -44,6 +45,12 @@ impl LetStatement {
     fn token_literal(&self) -> String {
         self.token.literal()
     }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct ReturnStatement {
+    pub token: token::Token,
+    pub return_value: Expression,
 }
 
 #[derive(Debug, PartialEq)]
