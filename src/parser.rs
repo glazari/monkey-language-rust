@@ -6,6 +6,7 @@ struct Parser {
     lexer: Lexer,
     cur_token: Token,
     peek_token: Token,
+    errors: Vec<String>,
 }
 
 impl Parser {
@@ -14,6 +15,7 @@ impl Parser {
             lexer,
             cur_token: Token::ILLEGAL,
             peek_token: Token::ILLEGAL,
+            errors: vec![],
         };
         parser.next_token();
         parser.next_token();
@@ -29,9 +31,21 @@ impl Parser {
         let mut program = Program::new();
 
         while self.cur_token != Token::EOF {
-            let statement = self.parse_statement()?;
+            let statement = match self.parse_statement() {
+                Ok(statement) => statement,
+                Err(e) => {
+                    self.errors.push(e);
+                    self.skip_statement();
+                    self.next_token();
+                    continue;
+                }
+            };
             program.statements.push(statement);
             self.next_token();
+        }
+
+        if self.errors.len() != 0 {
+            return Err(self.errors.join("\n"));
         }
 
         Ok(program)
@@ -41,6 +55,12 @@ impl Parser {
         match self.cur_token {
             Token::LET => self.parse_let_statement(),
             _ => Err(format!("no parse function for {:?}", self.cur_token)),
+        }
+    }
+
+    fn skip_statement(&mut self) {
+        while self.cur_token != Token::SEMICOLON {
+            self.next_token();
         }
     }
 
@@ -66,7 +86,7 @@ impl Parser {
             _ => {
                 return Err(format!(
                     "expected next token to be ASSIGN, got {:?}",
-                    self.cur_token
+                    self.peek_token
                 ))
             }
         }
@@ -77,9 +97,7 @@ impl Parser {
         });
 
         // skipping the expression until we encounter a semicolon
-        while self.cur_token != Token::SEMICOLON {
-            self.next_token();
-        }
+        self.skip_statement();
 
         Ok(Statement::LetStatement(LetStatement {
             token,
@@ -144,9 +162,30 @@ let foobar = 838383;
             ],
         };
 
-        let program = parser.parse_program();
-        let program = program.expect("parse_program() returned an error");
+        let program = match parser.parse_program() {
+            Ok(program) => program,
+            Err(e) => panic!("parse_program() returned an error: {}", e),
+        };
 
         assert_eq!(program, expected_program);
+    }
+
+
+    #[test]
+    fn test_let_statement_errors() {
+        let input = r#"
+let x  5;
+let = 10;
+let 838383;
+"#;
+
+        let lexer = Lexer::new(input);
+        let mut parser = Parser::new(lexer);
+
+        let program = parser.parse_program();
+        assert!(program.is_err());
+        assert_eq!(
+            program.err().unwrap(),
+            "expected next token to be ASSIGN, got INT(5)\nexpected next token to be IDENT, got ASSIGN\nno parse function for INT(838383)")
     }
 }
