@@ -186,6 +186,6 @@ let 838383;
         assert!(program.is_err());
         assert_eq!(
             program.err().unwrap(),
-            "expected next token to be ASSIGN, got INT(5)\nexpected next token to be IDENT, got ASSIGN\nno parse function for INT(838383)")
+            "expected next token to be ASSIGN, got INT(5)\nexpected next token to be IDENT, got ASSIGN\nexpected next token to be IDENT, got INT(838383)")
     }
 }
