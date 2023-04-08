@@ -1,6 +1,6 @@
 use crate::ast::{
-    Expression, ExpressionStatement, Identifier, IntegerLiteral, LetStatement, Program,
-    ReturnStatement, Statement,
+    Expression, ExpressionStatement, Identifier, IntegerLiteral, LetStatement, PrefixExpression,
+    Program, ReturnStatement, Statement,
 };
 use crate::lexer::Lexer;
 use crate::token::Token;
@@ -86,9 +86,24 @@ impl Parser {
         let left_exp = match self.cur_token {
             Token::IDENT(_) => self.parser_identifier(),
             Token::INT(_) => self.parse_integer_literal(),
+            Token::BANG | Token::MINUS => self.parse_prefix_expression(),
             _ => Err(format!("no prefix parse function for {:?}", self.cur_token)),
         };
         left_exp
+    }
+
+    fn parse_prefix_expression(&mut self) -> Result<Expression, String> {
+        let token = self.cur_token.clone();
+        let operator = self.cur_token.literal();
+        self.next_token();
+
+        let right = self.parse_expression(Precedence::PREFIX)?;
+
+        Ok(Expression::PrefixExpression(PrefixExpression {
+            token,
+            operator,
+            right: Box::new(right),
+        }))
     }
 
     fn parse_integer_literal(&mut self) -> Result<Expression, String> {
@@ -352,4 +367,43 @@ return 993322;
 
         assert_eq!(program, expected_program);
     }
+
+    #[test]
+    fn test_parsing_prefix_expressions() {
+        let tests = vec![
+            ("!5;", "!", 5),
+            ("-15;", "-", 15),
+            //   ("!true;", "!", true),
+            //   ("!false;", "!", false),
+        ];
+
+        for (input, operator, value) in tests {
+            let lexer = Lexer::new(input);
+            let mut parser = Parser::new(lexer);
+
+            let program = match parser.parse_program() {
+                Ok(program) => program,
+                Err(e) => panic!("parse_program() returned an error: {}", e),
+            };
+
+            assert_eq!(program.statements.len(), 1);
+
+            let statement = &program.statements[0];
+            let expression = match statement {
+                Statement::ExpressionStatement(expression_statement) => {
+                    &expression_statement.expression
+                }
+                _ => panic!("statement is not an expression statement"),
+            };
+
+            let prefix_expression = match expression {
+                Expression::PrefixExpression(prefix_expression) => prefix_expression,
+                _ => panic!("expression is not a prefix expression"),
+            };
+
+            assert_eq!(prefix_expression.operator, operator);
+            assert_eq!(prefix_expression.right.string(), value.to_string());
+        }
+    }
+
 }

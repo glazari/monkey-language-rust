@@ -98,17 +98,40 @@ impl ReturnStatement {
 pub enum Expression {
     Identifier(Identifier),
     IntegerLiteral(IntegerLiteral),
+    PrefixExpression(PrefixExpression),
 }
 
 impl Expression {
     fn token_literal(&self) -> String {
         "".to_string()
     }
-    fn string(&self) -> String {
+    pub fn string(&self) -> String {
         match self {
             Expression::Identifier(identifier) => identifier.string(),
             Expression::IntegerLiteral(integer_literal) => integer_literal.string(),
+            Expression::PrefixExpression(prefix_expression) => prefix_expression.string(),
         }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct PrefixExpression {
+    pub token: token::Token,
+    pub operator: String,
+    pub right: Box<Expression>,
+}
+
+impl PrefixExpression {
+    fn token_literal(&self) -> String {
+        self.token.literal()
+    }
+    fn string(&self) -> String {
+        let mut out = "".to_string();
+        out.push_str("(");
+        out.push_str(&self.operator);
+        out.push_str(&self.right.string());
+        out.push_str(")");
+        out
     }
 }
 
@@ -122,7 +145,7 @@ impl IntegerLiteral {
     fn token_literal(&self) -> String {
         self.token.literal()
     }
-    fn string(&self) -> String {
+    pub fn string(&self) -> String {
         self.token.literal()
     }
 }
