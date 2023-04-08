@@ -2,7 +2,7 @@ use crate::ast::{Expression, Identifier, LetStatement, Program, Statement, Retur
 use crate::lexer::Lexer;
 use crate::token::Token;
 
-struct Parser {
+pub struct Parser {
     lexer: Lexer,
     cur_token: Token,
     peek_token: Token,
@@ -10,7 +10,7 @@ struct Parser {
 }
 
 impl Parser {
-    fn new(lexer: Lexer) -> Parser {
+    pub fn new(lexer: Lexer) -> Parser {
         let mut parser = Parser {
             lexer,
             cur_token: Token::ILLEGAL,
@@ -27,7 +27,7 @@ impl Parser {
         self.peek_token = self.lexer.next_token();
     }
 
-    fn parse_program(&mut self) -> Result<Program, String> {
+    pub fn parse_program(&mut self) -> Result<Program, String> {
         let mut program = Program::new();
 
         while self.cur_token != Token::EOF {
