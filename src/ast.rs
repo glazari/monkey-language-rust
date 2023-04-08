@@ -20,12 +20,14 @@ impl Program {
         }
     }
 
-    fn string(&self) -> String {
+    pub fn string(&self) -> String {
         let mut out = "".to_string();
+        let mut out = Vec::new();
         for statement in &self.statements {
-            out.push_str(&statement.string());
+            //out.push_str(&statement.string());
+            out.push(statement.string());
         }
-        out
+        out.join("\n")
     }
 }
 
@@ -46,7 +48,6 @@ impl Statement {
             Statement::ReturnStatement(return_statement) => return_statement.string(),
             Statement::ExpressionStatement(expression_statement) => expression_statement.string(),
         };
-        out.push_str("\n");
         out
     }
 }
@@ -132,7 +133,9 @@ impl InfixExpression {
         let mut out = "".to_string();
         out.push_str("(");
         out.push_str(&self.left.string());
+        out.push_str(" ");
         out.push_str(&self.operator);
+        out.push_str(" ");
         out.push_str(&self.right.string());
         out.push_str(")");
         out
@@ -201,10 +204,11 @@ impl ExpressionStatement {
         self.token.literal()
     }
     fn string(&self) -> String {
-        if let Expression::Identifier(identifier) = &self.expression {
-            identifier.string()
-        } else {
-            "".to_string()
+        match &self.expression {
+            Expression::Identifier(identifier) => identifier.string(),
+            Expression::IntegerLiteral(integer_literal) => integer_literal.string(),
+            Expression::PrefixExpression(prefix_expression) => prefix_expression.string(),
+            Expression::InfixExpression(infix_expression) => infix_expression.string(),
         }
     }
 }
@@ -228,8 +232,7 @@ let foobar = another_identifier;
 
         let expected = r#"let x = 5;
 let y = 10;
-let foobar = another_identifier;
-"#;
+let foobar = another_identifier;"#;
 
         let lexer = Lexer::new(program_string);
         let mut parser = Parser::new(lexer);

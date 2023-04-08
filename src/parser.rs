@@ -94,7 +94,14 @@ impl Parser {
             && precedence.value() < self.peek_precedence().value()
         {
             match self.peek_token {
-                Token::PLUS | Token::MINUS | Token::SLASH | Token::ASTERISK | Token::GT | Token::LT | Token::EQ | Token::NotEQ => {
+                Token::PLUS
+                | Token::MINUS
+                | Token::SLASH
+                | Token::ASTERISK
+                | Token::GT
+                | Token::LT
+                | Token::EQ
+                | Token::NotEQ => {
                     self.next_token();
                     left_exp = self.parse_infix_expression(left_exp)?;
                 }
@@ -506,6 +513,49 @@ return 993322;
             assert_eq!(infix_expression.left.string(), left_value.to_string());
             assert_eq!(infix_expression.operator, operator);
             assert_eq!(infix_expression.right.string(), right_value.to_string());
+        }
+    }
+
+    #[test]
+    fn test_operator_precedence_parsing() {
+        let tests = vec![
+            ("-a * b", "((-a) * b)"),
+            ("!-a", "(!(-a))"),
+            ("a + b + c", "((a + b) + c)"),
+            ("a + b - c", "((a + b) - c)"),
+            ("a * b * c", "((a * b) * c)"),
+            ("a * b / c", "((a * b) / c)"),
+            ("a + b / c", "(a + (b / c))"),
+            ("a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)"),
+            ("3 + 4; -5 * 5", "(3 + 4)((-5) * 5)"),
+            ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"),
+            ("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"),
+            (
+                "3 + 4 * 5 == 3 * 1 + 4 * 5",
+                "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
+            ),
+            // ("true", "true"),
+            // ("false", "false"),
+            //("3 > 5 == false", "((3 > 5) == false)"),
+            //("3 < 5 == true", "((3 < 5) == true)"),
+            //("1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)"),
+            //("(5 + 5) * 2", "((5 + 5) * 2)"),
+            //("2 / (5 + 5)", "(2 / (5 + 5))"),
+            //("-(5 + 5)", "(-(5 + 5))"),
+            //("!(true == true)", "(!(true == true))"),
+            //("a + add(b * c) + d", "((a + add((b * c))) + d)"),
+        ];
+
+        for (input, expected) in tests {
+            let lexer = Lexer::new(input);
+            let mut parser = Parser::new(lexer);
+
+            let program = match parser.parse_program() {
+                Ok(program) => program,
+                Err(e) => panic!("parse_program() returned an error: {}", e),
+            };
+
+            assert_eq!(program.string().replace("\n", ""), expected);
         }
     }
 }
