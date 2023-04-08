@@ -1,4 +1,6 @@
-use crate::ast::{Expression, Identifier, LetStatement, Program, Statement, ReturnStatement};
+use crate::ast::{
+    Expression, ExpressionStatement, Identifier, LetStatement, Program, ReturnStatement, Statement,
+};
 use crate::lexer::Lexer;
 use crate::token::Token;
 
@@ -55,7 +57,7 @@ impl Parser {
         match self.cur_token {
             Token::LET => self.parse_let_statement(),
             Token::RETURN => self.parse_return_statement(),
-            _ => Err(format!("no parse function for {:?}", self.cur_token)),
+            _ => self.parse_expression_statement(),
         }
     }
 
@@ -65,7 +67,36 @@ impl Parser {
         }
     }
 
-    fn  parse_return_statement(&mut self) -> Result<Statement, String> {
+    fn parse_expression_statement(&mut self) -> Result<Statement, String> {
+        let token = self.cur_token.clone();
+        let expression = self.parse_expression(Precedence::LOWEST)?;
+
+        if self.peek_token == Token::SEMICOLON {
+            self.next_token();
+        }
+
+        Ok(Statement::ExpressionStatement(ExpressionStatement {
+            token,
+            expression,
+        }))
+    }
+
+    fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, String> {
+        let left_exp = match self.cur_token {
+            Token::IDENT(_) => self.parser_identifier(),
+            _ => Err(format!("no prefix parse function for {:?}", self.cur_token)),
+        };
+        left_exp
+    }
+
+    fn parser_identifier(&mut self) -> Result<Expression, String> {
+        Ok(Expression::Identifier(Identifier {
+            token: self.cur_token.clone(),
+            value: self.cur_token.literal(),
+        }))
+    }
+
+    fn parse_return_statement(&mut self) -> Result<Statement, String> {
         let token = self.cur_token.clone();
         self.next_token();
 
@@ -124,6 +155,16 @@ impl Parser {
             value: expression,
         }))
     }
+}
+
+enum Precedence {
+    LOWEST,
+    EQUALS,      // ==
+    LESSGREATER, // > or <
+    SUM,         // +
+    PRODUCT,     // *
+    PREFIX,      // -X or !X
+    CALL,        // myFunction(X)
 }
 
 #[cfg(test)]
@@ -189,7 +230,6 @@ let foobar = 838383;
         assert_eq!(program, expected_program);
     }
 
-
     #[test]
     fn test_let_statement_errors() {
         let input = r#"
@@ -251,5 +291,28 @@ return 993322;
         };
 
         assert_eq!(program, expected_program);
+    }
+
+    #[test]
+    fn test_identifier_expression() {
+        let input = "foobar;";
+
+        let lexer = Lexer::new(input);
+        let mut parser = Parser::new(lexer);
+
+        let expected_program = Program {
+            statements: vec![Statement::ExpressionStatement(ExpressionStatement {
+                token: Token::IDENT("foobar".to_string()),
+                expression: Expression::Identifier(Identifier {
+                    token: Token::IDENT("foobar".to_string()),
+                    value: "foobar".to_string(),
+                }),
+            })],
+        };
+
+        let program = match parser.parse_program() {
+            Ok(program) => program,
+            Err(e) => panic!("parse_program() returned an error: {}", e),
+        };
     }
 }

@@ -33,6 +33,7 @@ impl Program {
 pub enum Statement {
     LetStatement(LetStatement),
     ReturnStatement(ReturnStatement),
+    ExpressionStatement(ExpressionStatement),
 }
 
 impl Statement {
@@ -43,6 +44,7 @@ impl Statement {
         let mut out = match self {
             Statement::LetStatement(let_statement) => let_statement.string(),
             Statement::ReturnStatement(return_statement) => return_statement.string(),
+            Statement::ExpressionStatement(expression_statement) => expression_statement.string(),
         };
         out.push_str("\n");
         out
