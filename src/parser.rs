@@ -1,6 +1,6 @@
 use crate::ast::{
-    Expression, ExpressionStatement, Identifier, IntegerLiteral, LetStatement, PrefixExpression,
-    Program, ReturnStatement, Statement,
+    Expression, ExpressionStatement, Identifier, InfixExpression, IntegerLiteral, LetStatement,
+    PrefixExpression, Program, ReturnStatement, Statement,
 };
 use crate::lexer::Lexer;
 use crate::token::Token;
@@ -83,13 +83,41 @@ impl Parser {
     }
 
     fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, String> {
-        let left_exp = match self.cur_token {
+        let mut left_exp = match self.cur_token {
             Token::IDENT(_) => self.parser_identifier(),
             Token::INT(_) => self.parse_integer_literal(),
             Token::BANG | Token::MINUS => self.parse_prefix_expression(),
             _ => Err(format!("no prefix parse function for {:?}", self.cur_token)),
-        };
-        left_exp
+        }?;
+
+        while self.peek_token != Token::SEMICOLON
+            && precedence.value() < self.peek_precedence().value()
+        {
+            match self.peek_token {
+                Token::PLUS | Token::MINUS | Token::SLASH | Token::ASTERISK | Token::GT | Token::LT | Token::EQ | Token::NotEQ => {
+                    self.next_token();
+                    left_exp = self.parse_infix_expression(left_exp)?;
+                }
+                _ => return Ok(left_exp),
+            }
+        }
+
+        Ok(left_exp)
+    }
+
+    fn parse_infix_expression(&mut self, left: Expression) -> Result<Expression, String> {
+        let token = self.cur_token.clone();
+        let operator = self.cur_token.literal();
+        let precedence = self.cur_precedence();
+        self.next_token();
+        let right = self.parse_expression(precedence)?;
+
+        Ok(Expression::InfixExpression(InfixExpression {
+            token,
+            operator,
+            left: Box::new(left),
+            right: Box::new(right),
+        }))
     }
 
     fn parse_prefix_expression(&mut self) -> Result<Expression, String> {
@@ -182,6 +210,13 @@ impl Parser {
             value: expression,
         }))
     }
+
+    fn peek_precedence(&self) -> Precedence {
+        Precedence::from_token(&self.peek_token)
+    }
+    fn cur_precedence(&self) -> Precedence {
+        Precedence::from_token(&self.cur_token)
+    }
 }
 
 enum Precedence {
@@ -192,6 +227,31 @@ enum Precedence {
     PRODUCT,     // *
     PREFIX,      // -X or !X
     CALL,        // myFunction(X)
+}
+
+impl Precedence {
+    fn from_token(token: &Token) -> Precedence {
+        match token {
+            Token::EQ | Token::NotEQ => Precedence::EQUALS,
+            Token::LT | Token::GT => Precedence::LESSGREATER,
+            Token::PLUS | Token::MINUS => Precedence::SUM,
+            Token::SLASH | Token::ASTERISK => Precedence::PRODUCT,
+            Token::LPAREN => Precedence::CALL,
+            _ => Precedence::LOWEST,
+        }
+    }
+
+    fn value(&self) -> i32 {
+        match self {
+            Precedence::LOWEST => 1,
+            Precedence::EQUALS => 2,
+            Precedence::LESSGREATER => 3,
+            Precedence::SUM => 4,
+            Precedence::PRODUCT => 5,
+            Precedence::PREFIX => 6,
+            Precedence::CALL => 7,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -406,4 +466,46 @@ return 993322;
         }
     }
 
+    #[test]
+    fn test_parsing_infix_expressions() {
+        let tests = vec![
+            ("5 + 5;", 5, "+", 5),
+            ("5 - 5;", 5, "-", 5),
+            ("5 * 5;", 5, "*", 5),
+            ("5 / 5;", 5, "/", 5),
+            ("5 > 5;", 5, ">", 5),
+            ("5 < 5;", 5, "<", 5),
+            ("5 == 5;", 5, "==", 5),
+            ("5 != 5;", 5, "!=", 5),
+        ];
+
+        for (input, left_value, operator, right_value) in tests {
+            let lexer = Lexer::new(input);
+            let mut parser = Parser::new(lexer);
+
+            let program = match parser.parse_program() {
+                Ok(program) => program,
+                Err(e) => panic!("parse_program() returned an error: {}", e),
+            };
+
+            assert_eq!(program.statements.len(), 1);
+
+            let statement = &program.statements[0];
+            let expression = match statement {
+                Statement::ExpressionStatement(expression_statement) => {
+                    &expression_statement.expression
+                }
+                _ => panic!("statement is not an expression statement"),
+            };
+
+            let infix_expression = match expression {
+                Expression::InfixExpression(infix_expression) => infix_expression,
+                _ => panic!("expression is not an infix expression"),
+            };
+
+            assert_eq!(infix_expression.left.string(), left_value.to_string());
+            assert_eq!(infix_expression.operator, operator);
+            assert_eq!(infix_expression.right.string(), right_value.to_string());
+        }
+    }
 }

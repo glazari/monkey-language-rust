@@ -99,6 +99,7 @@ pub enum Expression {
     Identifier(Identifier),
     IntegerLiteral(IntegerLiteral),
     PrefixExpression(PrefixExpression),
+    InfixExpression(InfixExpression),
 }
 
 impl Expression {
@@ -110,7 +111,31 @@ impl Expression {
             Expression::Identifier(identifier) => identifier.string(),
             Expression::IntegerLiteral(integer_literal) => integer_literal.string(),
             Expression::PrefixExpression(prefix_expression) => prefix_expression.string(),
+            Expression::InfixExpression(infix_expression) => infix_expression.string(),
         }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct InfixExpression {
+    pub token: token::Token,
+    pub left: Box<Expression>,
+    pub operator: String,
+    pub right: Box<Expression>,
+}
+
+impl InfixExpression {
+    fn token_literal(&self) -> String {
+        self.token.literal()
+    }
+    fn string(&self) -> String {
+        let mut out = "".to_string();
+        out.push_str("(");
+        out.push_str(&self.left.string());
+        out.push_str(&self.operator);
+        out.push_str(&self.right.string());
+        out.push_str(")");
+        out
     }
 }
 
