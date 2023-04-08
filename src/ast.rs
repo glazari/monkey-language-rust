@@ -97,6 +97,7 @@ impl ReturnStatement {
 #[derive(Debug, PartialEq)]
 pub enum Expression {
     Identifier(Identifier),
+    IntegerLiteral(IntegerLiteral),
 }
 
 impl Expression {
@@ -106,7 +107,23 @@ impl Expression {
     fn string(&self) -> String {
         match self {
             Expression::Identifier(identifier) => identifier.string(),
+            Expression::IntegerLiteral(integer_literal) => integer_literal.string(),
         }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct IntegerLiteral {
+    pub token: token::Token,
+    pub value: i64,
+}
+
+impl IntegerLiteral {
+    fn token_literal(&self) -> String {
+        self.token.literal()
+    }
+    fn string(&self) -> String {
+        self.token.literal()
     }
 }
 

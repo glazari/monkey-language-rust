@@ -1,5 +1,6 @@
 use crate::ast::{
-    Expression, ExpressionStatement, Identifier, LetStatement, Program, ReturnStatement, Statement,
+    Expression, ExpressionStatement, Identifier, IntegerLiteral, LetStatement, Program,
+    ReturnStatement, Statement,
 };
 use crate::lexer::Lexer;
 use crate::token::Token;
@@ -84,9 +85,20 @@ impl Parser {
     fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, String> {
         let left_exp = match self.cur_token {
             Token::IDENT(_) => self.parser_identifier(),
+            Token::INT(_) => self.parse_integer_literal(),
             _ => Err(format!("no prefix parse function for {:?}", self.cur_token)),
         };
         left_exp
+    }
+
+    fn parse_integer_literal(&mut self) -> Result<Expression, String> {
+        let token = self.cur_token.clone();
+        let value = match &token {
+            Token::INT(value) => value.clone(),
+            _ => panic!("expected token to be INT"),
+        };
+
+        Ok(Expression::IntegerLiteral(IntegerLiteral { token, value }))
     }
 
     fn parser_identifier(&mut self) -> Result<Expression, String> {
@@ -314,5 +326,30 @@ return 993322;
             Ok(program) => program,
             Err(e) => panic!("parse_program() returned an error: {}", e),
         };
+    }
+
+    #[test]
+    fn test_integer_literal_expression() {
+        let input = "5;";
+
+        let lexer = Lexer::new(input);
+        let mut parser = Parser::new(lexer);
+
+        let expected_program = Program {
+            statements: vec![Statement::ExpressionStatement(ExpressionStatement {
+                token: Token::INT(5),
+                expression: Expression::IntegerLiteral(IntegerLiteral {
+                    token: Token::INT(5),
+                    value: 5,
+                }),
+            })],
+        };
+
+        let program = match parser.parse_program() {
+            Ok(program) => program,
+            Err(e) => panic!("parse_program() returned an error: {}", e),
+        };
+
+        assert_eq!(program, expected_program);
     }
 }
